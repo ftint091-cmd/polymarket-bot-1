@@ -55,6 +55,43 @@ python run_single_cycle.py
 python main.py
 ```
 
+### Web UI (Paper Mode Only)
+
+A minimal FastAPI dashboard lets you trigger and inspect trading cycles from a browser.
+
+```bash
+# Install web dependencies (FastAPI + Uvicorn)
+pip install -r requirements.txt
+
+# Start the web UI (paper mode is the default)
+python web_app.py
+
+# Or with uvicorn directly:
+uvicorn web_app:app --host 0.0.0.0 --port 8000
+```
+
+Open [http://localhost:8000](http://localhost:8000) in your browser.
+
+**Available routes:**
+
+| Route | Method | Description |
+|-------|--------|-------------|
+| `/` | GET | Dashboard HTML: mode, last cycle stats, recent logs |
+| `/run-cycle` | POST | Execute one cycle (paper mode only) |
+| `/api/status` | GET | Latest cycle summary as JSON |
+
+> ⛔ **Safety**: The web UI will return `403 Forbidden` if `ENABLE_REAL_TRADING=true`
+> or if `execution_mode` is set to `real`. It operates in **paper mode only**.
+
+Optional environment variables for the web UI:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `WEB_PORT` | `8000` | Port to listen on |
+| `WEB_HOST` | `127.0.0.1` | Host to bind to (`0.0.0.0` exposes to all interfaces) |
+| `BOT_PROFILE` | `paper_test` | Config profile |
+| `CONFIG_DIR` | `config` | Path to config directory |
+
 ### Run with a specific profile
 
 ```bash
