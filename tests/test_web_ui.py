@@ -269,14 +269,14 @@ async def test_api_status_returns_last_cycle():
 
 @pytest.mark.anyio
 async def test_api_status_reflects_real_trading_flag():
-    """GET /api/status correctly reports real_trading_enabled."""
+    """GET /api/status reports real_trading_enabled=true when BOTH conditions are set."""
     from httpx import ASGITransport, AsyncClient
     import web_app
     web_app._last_outcome = None
 
     with (
         patch("web_app._load_config", return_value={"execution_mode": "paper"}),
-        patch.dict(os.environ, {"ENABLE_REAL_TRADING": "true"}),
+        patch.dict(os.environ, {"ENABLE_REAL_TRADING": "true", "BOT_EXECUTION_MODE": "real"}),
     ):
         async with AsyncClient(
             transport=ASGITransport(app=web_app.app), base_url="http://test"
@@ -285,6 +285,28 @@ async def test_api_status_reflects_real_trading_flag():
 
     assert resp.status_code == 200
     data = resp.json()
+    assert data["real_trading_enabled"] is True
+
+
+@pytest.mark.anyio
+async def test_api_status_mode_from_bot_execution_mode_env():
+    """GET /api/status reflects BOT_EXECUTION_MODE env var in 'mode' field."""
+    from httpx import ASGITransport, AsyncClient
+    import web_app
+    web_app._last_outcome = None
+
+    with (
+        patch("web_app._load_config", return_value={"execution_mode": "paper"}),
+        patch.dict(os.environ, {"BOT_EXECUTION_MODE": "real", "ENABLE_REAL_TRADING": "true"}),
+    ):
+        async with AsyncClient(
+            transport=ASGITransport(app=web_app.app), base_url="http://test"
+        ) as client:
+            resp = await client.get("/api/status")
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["mode"] == "real"
     assert data["real_trading_enabled"] is True
 
 

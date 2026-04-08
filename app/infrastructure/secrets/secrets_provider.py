@@ -23,4 +23,15 @@ class SecretsProvider:
         return self.get("BINANCE_API_SECRET")
 
     def is_real_trading_enabled(self) -> bool:
-        return os.environ.get("ENABLE_REAL_TRADING", "").lower() == "true"
+        """Return True only when BOTH execution mode is 'real' AND safety flag is set.
+
+        Safety flag: ENABLE_REAL_TRADING=true (primary) or
+                     REAL_TRADING_ENABLED=true (legacy alias).
+        Both checks are case-insensitive.
+        """
+        execution_mode = os.environ.get("BOT_EXECUTION_MODE", "").strip().lower()
+        if execution_mode != "real":
+            return False
+        primary = os.environ.get("ENABLE_REAL_TRADING", "").strip().lower()
+        legacy = os.environ.get("REAL_TRADING_ENABLED", "").strip().lower()
+        return primary == "true" or legacy == "true"
