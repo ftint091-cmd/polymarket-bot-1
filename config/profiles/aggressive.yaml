@@ -1,0 +1,17 @@
+# Aggressive profile - larger sizes, lower confidence thresholds
+# WARNING: Use only with proper risk management
+extends: default
+execution_mode: paper
+cycle_interval_seconds: 30
+
+sizing:
+  base_size: 25.0
+  max_size: 500.0
+
+decision:
+  gate:
+    min_confidence: 0.25
+
+risk:
+  max_position_pct: 0.10
+  max_total_exposure_pct: 0.40

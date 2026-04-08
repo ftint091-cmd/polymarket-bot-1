@@ -1,0 +1,12 @@
+# Default profile - balanced settings
+execution_mode: paper
+cycle_interval_seconds: 60
+paper_capital: 10000.0
+
+sizing:
+  base_size: 10.0
+  max_size: 200.0
+
+decision:
+  gate:
+    min_confidence: 0.35

@@ -1,0 +1,44 @@
+# Core configuration - base defaults for all profiles
+execution_mode: paper
+cycle_interval_seconds: 60
+markets_per_cycle: 5
+reference_symbol: BTCUSDT
+paper_capital: 10000.0
+
+fault_policy:
+  max_consecutive_errors: 5
+  max_errors_per_hour: 20
+
+analytics:
+  spread_pressure:
+    min_spread: 0.01
+    max_spread: 0.10
+  edge_estimator:
+    min_edge: 0.03
+  book_imbalance:
+    threshold: 0.60
+
+decision:
+  gate:
+    min_signals: 1
+    min_confidence: 0.30
+  response_mode:
+    aggressive: 0.80
+    moderate: 0.50
+
+sizing:
+  base_size: 10.0
+  min_size: 1.0
+  max_size: 500.0
+  confidence_multiplier: true
+
+risk:
+  max_position_pct: 0.05
+  max_total_exposure_pct: 0.25
+  min_capital_reserve_pct: 0.10
+
+filters:
+  min_volume: 1000
+
+logging:
+  level: INFO
