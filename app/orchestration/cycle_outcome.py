@@ -14,3 +14,4 @@ class CycleOutcome:
     trades_executed: int = 0
     error: str | None = None
     details: dict[str, Any] = field(default_factory=dict)
+    found_signals: list[dict[str, Any]] = field(default_factory=list)

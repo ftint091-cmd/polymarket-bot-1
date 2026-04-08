@@ -7,6 +7,8 @@ Routes:
   POST /run-cycle   -> run one cycle (paper mode only)
   GET  /api/status  -> latest cycle summary/status
 """
+import html
+import json
 import logging
 import os
 import sys
@@ -149,6 +151,7 @@ _DASHBOARD_HTML = """<!DOCTYPE html>
     .ok      {{ color: #3fb950; }}
     .error   {{ color: #f85149; }}
     .skipped {{ color: #d29922; }}
+    .no-signals {{ color: #8b949e; font-style: italic; }}
   </style>
 </head>
 <body>
@@ -169,6 +172,11 @@ _DASHBOARD_HTML = """<!DOCTYPE html>
       <tr><th>Trades Executed</th><td>{trades_executed}</td></tr>
       <tr><th>Error</th><td class="error">{error}</td></tr>
     </table>
+  </div>
+
+  <div class="section">
+    <h2>Found Signals</h2>
+    {signals_html}
   </div>
 
   <div class="section">
@@ -209,6 +217,43 @@ _DASHBOARD_HTML = """<!DOCTYPE html>
 """
 
 
+def _render_signals_html(signals: list[dict]) -> str:
+    """Render the found signals list as an HTML table, or a placeholder if empty."""
+    if not signals:
+        return '<p class="no-signals">(no signals found in last cycle)</p>'
+
+    rows = []
+    for s in signals:
+        signal_id = s.get("signal_id", "-")
+        market_id = s.get("market_id", "-")
+        module = s.get("module", "-")
+        score = s.get("score", "-")
+        side = s.get("side", "-")
+        confidence = s.get("confidence", "-")
+        metadata = s.get("metadata", {})
+        meta_str = html.escape(json.dumps(metadata, ensure_ascii=True)) if metadata else ""
+        rows.append(
+            f"<tr>"
+            f"<td>{html.escape(str(signal_id))}</td>"
+            f"<td>{html.escape(str(market_id))}</td>"
+            f"<td>{html.escape(str(module))}</td>"
+            f"<td>{html.escape(str(score))}</td>"
+            f"<td>{html.escape(str(side))}</td>"
+            f"<td>{html.escape(str(confidence))}</td>"
+            f"<td><pre style='margin:0'>{meta_str}</pre></td>"
+            f"</tr>"
+        )
+
+    header = (
+        "<table>"
+        "<tr>"
+        "<th>Signal ID</th><th>Market ID</th><th>Module</th>"
+        "<th>Score</th><th>Side</th><th>Confidence</th><th>Metadata</th>"
+        "</tr>"
+    )
+    return header + "".join(rows) + "</table>"
+
+
 @app.get("/", response_class=HTMLResponse, summary="Dashboard")
 async def dashboard() -> HTMLResponse:
     """Render the bot dashboard."""
@@ -227,16 +272,19 @@ async def dashboard() -> HTMLResponse:
         trades_attempted = o.get("trades_attempted", 0)
         trades_executed = o.get("trades_executed", 0)
         error = o.get("error") or ""
+        found_signals = o.get("found_signals", [])
     else:
         cycle_id = status = started_at = finished_at = "-"
         markets_scanned = signals_generated = trades_attempted = trades_executed = 0
         error = ""
+        found_signals = []
 
     status_class = {"ok": "ok", "error": "error", "skipped": "skipped"}.get(
         str(status).lower(), ""
     )
 
     logs_text = "\n".join(_recent_logs) if _recent_logs else "(no logs yet)"
+    signals_html = _render_signals_html(found_signals)
 
     html = _DASHBOARD_HTML.format(
         mode=mode,
@@ -251,6 +299,7 @@ async def dashboard() -> HTMLResponse:
         trades_attempted=trades_attempted,
         trades_executed=trades_executed,
         error=error,
+        signals_html=signals_html,
         recent_logs=logs_text,
     )
     return HTMLResponse(content=html)
@@ -277,6 +326,7 @@ async def run_cycle() -> JSONResponse:
         "trades_attempted": outcome.trades_attempted,
         "trades_executed": outcome.trades_executed,
         "error": outcome.error,
+        "found_signals": outcome.found_signals,
     }
 
     return JSONResponse(content=_last_outcome, status_code=200)

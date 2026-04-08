@@ -29,6 +29,17 @@ def _make_mock_outcome():
         signals_generated=1,
         trades_attempted=1,
         trades_executed=1,
+        found_signals=[
+            {
+                "signal_id": "sig-1",
+                "market_id": "mkt-a",
+                "module": "edge_estimator",
+                "score": 0.75,
+                "side": "yes",
+                "confidence": 0.8,
+                "metadata": {"edge": 0.05},
+            }
+        ],
     )
 
 
@@ -275,3 +286,201 @@ async def test_api_status_reflects_real_trading_flag():
     assert resp.status_code == 200
     data = resp.json()
     assert data["real_trading_enabled"] is True
+
+
+# ---------------------------------------------------------------------------
+# Found Signals in API /api/status
+# ---------------------------------------------------------------------------
+
+@pytest.mark.anyio
+async def test_api_status_includes_found_signals():
+    """GET /api/status returns found_signals list in last_cycle."""
+    from httpx import ASGITransport, AsyncClient
+    import web_app
+    web_app._last_outcome = {
+        "cycle_id": "cycle-sig",
+        "status": "ok",
+        "started_at": "2024-01-01T00:00:00Z",
+        "finished_at": "2024-01-01T00:00:01Z",
+        "markets_scanned": 2,
+        "signals_generated": 1,
+        "trades_attempted": 1,
+        "trades_executed": 1,
+        "error": None,
+        "found_signals": [
+            {
+                "signal_id": "sig-99",
+                "market_id": "mkt-z",
+                "module": "book_imbalance",
+                "score": 0.6,
+                "side": "no",
+                "confidence": 0.7,
+                "metadata": {},
+            }
+        ],
+    }
+
+    with (
+        patch("web_app._load_config", return_value={"execution_mode": "paper"}),
+        patch.dict(os.environ, {"ENABLE_REAL_TRADING": "false"}),
+    ):
+        async with AsyncClient(
+            transport=ASGITransport(app=web_app.app), base_url="http://test"
+        ) as client:
+            resp = await client.get("/api/status")
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "found_signals" in data["last_cycle"]
+    signals = data["last_cycle"]["found_signals"]
+    assert isinstance(signals, list)
+    assert len(signals) == 1
+    assert signals[0]["signal_id"] == "sig-99"
+    assert signals[0]["module"] == "book_imbalance"
+
+
+@pytest.mark.anyio
+async def test_api_status_empty_found_signals():
+    """GET /api/status returns empty list when no signals were found."""
+    from httpx import ASGITransport, AsyncClient
+    import web_app
+    web_app._last_outcome = {
+        "cycle_id": "cycle-empty",
+        "status": "ok",
+        "started_at": "2024-01-01T00:00:00Z",
+        "finished_at": "2024-01-01T00:00:01Z",
+        "markets_scanned": 1,
+        "signals_generated": 0,
+        "trades_attempted": 0,
+        "trades_executed": 0,
+        "error": None,
+        "found_signals": [],
+    }
+
+    with (
+        patch("web_app._load_config", return_value={"execution_mode": "paper"}),
+        patch.dict(os.environ, {"ENABLE_REAL_TRADING": "false"}),
+    ):
+        async with AsyncClient(
+            transport=ASGITransport(app=web_app.app), base_url="http://test"
+        ) as client:
+            resp = await client.get("/api/status")
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["last_cycle"]["found_signals"] == []
+
+
+# ---------------------------------------------------------------------------
+# Found Signals rendered in dashboard GET /
+# ---------------------------------------------------------------------------
+
+@pytest.mark.anyio
+async def test_dashboard_shows_found_signals_section():
+    """Dashboard HTML includes a 'Found Signals' section."""
+    from httpx import ASGITransport, AsyncClient
+    import web_app
+    web_app._last_outcome = None
+
+    async with AsyncClient(
+        transport=ASGITransport(app=web_app.app), base_url="http://test"
+    ) as client:
+        resp = await client.get("/")
+
+    assert resp.status_code == 200
+    assert "Found Signals" in resp.text
+
+
+@pytest.mark.anyio
+async def test_dashboard_renders_signal_data():
+    """Dashboard shows signal details when last cycle has found signals."""
+    from httpx import ASGITransport, AsyncClient
+    import web_app
+    web_app._last_outcome = {
+        "cycle_id": "cycle-render",
+        "status": "ok",
+        "started_at": "2024-01-01T00:00:00Z",
+        "finished_at": "2024-01-01T00:00:01Z",
+        "markets_scanned": 3,
+        "signals_generated": 1,
+        "trades_attempted": 1,
+        "trades_executed": 1,
+        "error": None,
+        "found_signals": [
+            {
+                "signal_id": "sig-render",
+                "market_id": "mkt-render",
+                "module": "spread_pressure",
+                "score": 0.9,
+                "side": "yes",
+                "confidence": 0.95,
+                "metadata": {"spread": 0.02},
+            }
+        ],
+    }
+
+    async with AsyncClient(
+        transport=ASGITransport(app=web_app.app), base_url="http://test"
+    ) as client:
+        resp = await client.get("/")
+
+    assert resp.status_code == 200
+    assert "sig-render" in resp.text
+    assert "mkt-render" in resp.text
+    assert "spread_pressure" in resp.text
+
+
+@pytest.mark.anyio
+async def test_dashboard_no_signals_placeholder():
+    """Dashboard shows placeholder text when no signals exist."""
+    from httpx import ASGITransport, AsyncClient
+    import web_app
+    web_app._last_outcome = {
+        "cycle_id": "cycle-nosig",
+        "status": "ok",
+        "started_at": "2024-01-01T00:00:00Z",
+        "finished_at": "2024-01-01T00:00:01Z",
+        "markets_scanned": 1,
+        "signals_generated": 0,
+        "trades_attempted": 0,
+        "trades_executed": 0,
+        "error": None,
+        "found_signals": [],
+    }
+
+    async with AsyncClient(
+        transport=ASGITransport(app=web_app.app), base_url="http://test"
+    ) as client:
+        resp = await client.get("/")
+
+    assert resp.status_code == 200
+    assert "no signals found" in resp.text
+
+
+@pytest.mark.anyio
+async def test_run_cycle_response_includes_found_signals():
+    """POST /run-cycle response includes found_signals list."""
+    from httpx import ASGITransport, AsyncClient
+    import web_app
+    web_app._last_outcome = None
+
+    mock_outcome = _make_mock_outcome()
+    mock_orchestrator = MagicMock()
+    mock_orchestrator.run_cycle.return_value = mock_outcome
+
+    with (
+        patch("web_app._load_config", return_value={"execution_mode": "paper"}),
+        patch("web_app.build_orchestrator", return_value=mock_orchestrator),
+        patch.dict(os.environ, {"ENABLE_REAL_TRADING": "false"}),
+    ):
+        async with AsyncClient(
+            transport=ASGITransport(app=web_app.app), base_url="http://test"
+        ) as client:
+            resp = await client.post("/run-cycle")
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "found_signals" in data
+    assert isinstance(data["found_signals"], list)
+    assert len(data["found_signals"]) == 1
+    assert data["found_signals"][0]["signal_id"] == "sig-1"

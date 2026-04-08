@@ -76,9 +76,9 @@ Open [http://localhost:8000](http://localhost:8000) in your browser.
 
 | Route | Method | Description |
 |-------|--------|-------------|
-| `/` | GET | Dashboard HTML: mode, last cycle stats, recent logs |
+| `/` | GET | Dashboard HTML: mode, last cycle stats, **found signals list**, recent logs |
 | `/run-cycle` | POST | Execute one cycle (paper mode only) |
-| `/api/status` | GET | Latest cycle summary as JSON |
+| `/api/status` | GET | Latest cycle summary as JSON, including `found_signals` list under `last_cycle` |
 
 > ⛔ **Safety**: The web UI will return `403 Forbidden` if `ENABLE_REAL_TRADING=true`
 > or if `execution_mode` is set to `real`. It operates in **paper mode only**.

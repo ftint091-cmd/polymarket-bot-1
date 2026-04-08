@@ -104,6 +104,10 @@ class Orchestrator:
             # Stats
             self._stats.save()
 
+            serialized_signals = [
+                dataclasses.asdict(s) for s in state.analytics.signals
+            ]
+
             return CycleOutcome(
                 cycle_id=cycle_id,
                 status=CycleStatus.OK,
@@ -113,6 +117,7 @@ class Orchestrator:
                 signals_generated=signals_generated,
                 trades_attempted=1 if state.execution.attempted else 0,
                 trades_executed=trades_executed,
+                found_signals=serialized_signals,
             )
 
         except Exception as e:
