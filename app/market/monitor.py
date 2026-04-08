@@ -1,3 +1,4 @@
+﻿from app.config.target_markets import is_target_market, market_display_name
 import logging
 from typing import Any
 from app.market.adapters.polymarket_adapter import PolymarketAdapter
@@ -16,6 +17,9 @@ class MarketMonitor:
     def collect(self) -> dict[str, Any]:
         limit = self._config.get("markets_per_cycle", 5)
         markets = self._polymarket.get_markets(limit)
+        markets = [m for m in markets if is_target_market(m)]
+        for m in markets:
+            m["market_name"] = market_display_name(m)
 
         # Enrich with orderbook data
         for market in markets:
@@ -38,3 +42,4 @@ class MarketMonitor:
             "binance_context": binance_ctx,
             "markets_count": len(markets),
         }
+
