@@ -1,0 +1,16 @@
+# Cautious profile - smaller sizes, higher confidence thresholds
+extends: default
+execution_mode: paper
+cycle_interval_seconds: 120
+
+sizing:
+  base_size: 5.0
+  max_size: 50.0
+
+decision:
+  gate:
+    min_confidence: 0.60
+
+risk:
+  max_position_pct: 0.02
+  max_total_exposure_pct: 0.10
