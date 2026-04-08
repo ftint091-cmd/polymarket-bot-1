@@ -4,7 +4,7 @@ Polymarket Trading Bot - Minimal FastAPI Web UI (paper mode only).
 
 Routes:
   GET  /            -> dashboard HTML
-  POST /run-cycle   -> run one cycle (paper mode only)
+  POST /run-cycle   -> run one trading cycle (paper mode only)
   GET  /api/status  -> latest cycle summary/status
 """
 import html
@@ -15,6 +15,13 @@ import sys
 from collections import deque
 from pathlib import Path
 from typing import Any
+
+# Load .env from project root before anything else (no-op if file absent)
+try:
+    from dotenv import load_dotenv as _load_dotenv
+    _load_dotenv(Path(__file__).parent / ".env", override=False)
+except ImportError:
+    pass
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -61,12 +68,26 @@ _install_log_capture()
 # ---------------------------------------------------------------------------
 
 def _is_real_trading_active() -> bool:
-    """Return True if real trading is enabled via environment variable."""
-    return os.environ.get("ENABLE_REAL_TRADING", "").lower() == "true"
+    """Return True if any real trading signal is detected (conservative safety gate).
+
+    Checks ENABLE_REAL_TRADING (primary), REAL_TRADING_ENABLED (legacy), or
+    BOT_EXECUTION_MODE=real.  Used to refuse web-UI cycles when real trading
+    could be in effect.
+    """
+    enable = os.environ.get("ENABLE_REAL_TRADING", "").strip().lower() == "true"
+    legacy = os.environ.get("REAL_TRADING_ENABLED", "").strip().lower() == "true"
+    mode_real = os.environ.get("BOT_EXECUTION_MODE", "").strip().lower() == "real"
+    return enable or legacy or mode_real
 
 
 def _get_execution_mode(config: dict) -> str:
-    return config.get("execution_mode", "paper")
+    """Return the effective execution mode.
+
+    Prefers the BOT_EXECUTION_MODE env var (set in .env) so that the status
+    endpoint reflects the runtime value, falling back to the profile config.
+    """
+    cfg_mode = config.get("execution_mode") or "paper"
+    return os.environ.get("BOT_EXECUTION_MODE", cfg_mode).lower()
 
 
 def _assert_paper_only(config: dict) -> None:
@@ -337,9 +358,11 @@ async def run_cycle() -> JSONResponse:
 @app.get("/api/status", summary="Latest cycle status")
 async def api_status() -> JSONResponse:
     """Return the latest cycle outcome as JSON, or a 'no cycles yet' message."""
+    from app.infrastructure.secrets.secrets_provider import SecretsProvider
+
     config = _load_config()
     mode = _get_execution_mode(config)
-    real_trading = _is_real_trading_active()
+    real_trading = SecretsProvider().is_real_trading_enabled()
 
     payload: dict[str, Any] = {
         "mode": mode,
