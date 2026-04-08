@@ -30,6 +30,9 @@ class PaperExecutor:
             ob = market["orderbook"]
             price = ob.get("best_ask", 0.5) if state.decision.side == "yes" else ob.get("best_bid", 0.5)
         else:
+            if not market:
+                logger.warning("[PAPER] Market %s not found in market data, using default price 0.5",
+                               state.decision.market_id)
             price = 0.5
 
         logger.info("[PAPER] Order filled: id=%s market=%s side=%s size=%.2f price=%.4f",

@@ -50,4 +50,5 @@ logs/**/*.jsonl
 # Data (keep structure)
 data/state_snapshots/*.json
 data/positions/positions.json
+data/performance/stats.json
 !data/**/.gitkeep

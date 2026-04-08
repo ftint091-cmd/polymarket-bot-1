@@ -10,6 +10,10 @@ class RetryPolicy:
     base_delay_seconds: float = 1.0
     backoff_factor: float = 2.0
 
+    def __post_init__(self) -> None:
+        if self.max_attempts < 1:
+            raise ValueError("max_attempts must be at least 1")
+
     def execute(self, func, *args, **kwargs):
         last_exc = None
         for attempt in range(self.max_attempts):

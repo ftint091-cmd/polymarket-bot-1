@@ -1,3 +1,4 @@
+import os
 from typing import Any
 from app.shared.exceptions import ConfigError
 
@@ -13,6 +14,5 @@ def validate_config(config: dict[str, Any]) -> None:
         raise ConfigError(f"Invalid execution_mode: {mode}")
 
     if mode == "real":
-        import os
         if os.environ.get("ENABLE_REAL_TRADING", "").lower() != "true":
             raise ConfigError("execution_mode=real requires ENABLE_REAL_TRADING=true env var")

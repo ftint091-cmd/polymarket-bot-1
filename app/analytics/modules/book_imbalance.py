@@ -44,7 +44,7 @@ class BookImbalanceModule(BaseAnalyticsModule):
                     score=1 - imbalance,
                     side="no",
                     confidence=1 - imbalance,
-                    metadata={"imbalance": imbalance},
+                    metadata={"imbalance": imbalance, "total_bid": total_bid, "total_ask": total_ask},
                 ))
 
         return ModuleOutput(module_name=self.name, success=True, signals=signals)
