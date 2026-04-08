@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 """
 Polymarket Trading Bot - Minimal FastAPI Web UI (paper mode only).
 
@@ -181,7 +181,7 @@ _DASHBOARD_HTML = """<!DOCTYPE html>
 
   <div class="section">
     <h2>Run One Cycle</h2>
-    <button id="run-btn" onclick="runCycle()">▶ Run Cycle</button>
+    <button id="run-btn" onclick="runCycle()">в–¶ Run Cycle</button>
     <div id="run-status"></div>
   </div>
 
@@ -195,17 +195,17 @@ _DASHBOARD_HTML = """<!DOCTYPE html>
       const btn = document.getElementById('run-btn');
       const status = document.getElementById('run-status');
       btn.disabled = true;
-      status.textContent = 'Running…';
+      status.textContent = 'RunningвЂ¦';
       try {{
         const resp = await fetch('/run-cycle', {{ method: 'POST' }});
         const data = await resp.json();
         if (resp.ok) {{
-          status.textContent = '✓ Done: ' + JSON.stringify(data);
+          status.textContent = 'вњ“ Done: ' + JSON.stringify(data);
         }} else {{
-          status.textContent = '✗ Error: ' + (data.detail || JSON.stringify(data));
+          status.textContent = 'вњ— Error: ' + (data.detail || JSON.stringify(data));
         }}
       }} catch(e) {{
-        status.textContent = '✗ Network error: ' + e.message;
+        status.textContent = 'вњ— Network error: ' + e.message;
       }} finally {{
         btn.disabled = false;
         setTimeout(() => location.reload(), 1500);
@@ -226,6 +226,7 @@ def _render_signals_html(signals: list[dict]) -> str:
     for s in signals:
         signal_id = s.get("signal_id", "-")
         market_id = s.get("market_id", "-")
+        market_name = s.get("market_name", market_id)
         module = s.get("module", "-")
         score = s.get("score", "-")
         side = s.get("side", "-")
@@ -235,6 +236,7 @@ def _render_signals_html(signals: list[dict]) -> str:
         rows.append(
             f"<tr>"
             f"<td>{html.escape(str(signal_id))}</td>"
+            f"<td>{html.escape(str(market_name))}</td>"
             f"<td>{html.escape(str(market_id))}</td>"
             f"<td>{html.escape(str(module))}</td>"
             f"<td>{html.escape(str(score))}</td>"
@@ -247,7 +249,7 @@ def _render_signals_html(signals: list[dict]) -> str:
     header = (
         "<table>"
         "<tr>"
-        "<th>Signal ID</th><th>Market ID</th><th>Module</th>"
+        "<th>Signal ID</th><th>Market Name</th><th>Market ID</th><th>Module</th>"
         "<th>Score</th><th>Side</th><th>Confidence</th><th>Metadata</th>"
         "</tr>"
     )
@@ -368,3 +370,5 @@ if __name__ == "__main__":
         reload=False,
         log_level=os.environ.get("LOG_LEVEL", "info").lower(),
     )
+
+

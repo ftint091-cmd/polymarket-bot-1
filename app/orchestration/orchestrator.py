@@ -1,5 +1,7 @@
-import logging
+﻿import logging
 import dataclasses
+
+from app.config.target_markets import market_display_name
 from app.orchestration.cycle_outcome import CycleOutcome
 from app.market.monitor import MarketMonitor
 from app.state.state_builder import StateBuilder
@@ -104,9 +106,20 @@ class Orchestrator:
             # Stats
             self._stats.save()
 
-            serialized_signals = [
-                dataclasses.asdict(s) for s in state.analytics.signals
-            ]
+            serialized_signals = []
+            for s in state.analytics.signals:
+                if dataclasses.is_dataclass(s):
+                    serialized_signals.append(dataclasses.asdict(s))
+                elif isinstance(s, dict):
+                    serialized_signals.append(s)
+                elif hasattr(s, "model_dump"):
+                    serialized_signals.append(s.model_dump())
+                elif hasattr(s, "dict"):
+                    serialized_signals.append(s.dict())
+                elif hasattr(s, "__dict__"):
+                    serialized_signals.append(vars(s))
+                else:
+                    serialized_signals.append({"value": str(s)})
 
             return CycleOutcome(
                 cycle_id=cycle_id,
@@ -142,3 +155,7 @@ def _make_execution_result(state):
         mode=state.execution.mode,
         error=state.execution.error,
     )
+
+
+
+
